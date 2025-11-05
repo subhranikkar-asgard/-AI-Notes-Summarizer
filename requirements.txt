@@ -1,0 +1,6 @@
+flask
+transformers
+torch
+sentencepiece
+PyPDF2
+scikit-learn
