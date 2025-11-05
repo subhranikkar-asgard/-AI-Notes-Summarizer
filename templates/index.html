@@ -1,161 +1,55 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Notes Summarizer</title>
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; line-height: 1.6; padding: 20px; max-width: 800px; margin: auto; background-color: #f9f9f9; }
-        h1, h2 { color: #333; }
-        textarea { width: 100%; min-height: 150px; border: 1px solid #ddd; border-radius: 5px; padding: 10px; box-sizing: border-box; }
-        button { background-color: #007bff; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-size: 16px; }
-        button:hover { background-color: #0056b3; }
-        button:disabled { background-color: #ccc; }
-        .container { background-color: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        #results { margin-top: 20px; }
-        #results div { background-color: #f4f4f4; padding: 15px; border-radius: 5px; margin-top: 10px; }
-        #keywords-list { display: flex; flex-wrap: wrap; gap: 8px; padding: 0; margin: 0; }
-        #keywords-list li { list-style-type: none; background-color: #e0e0e0; padding: 5px 10px; border-radius: 15px; font-size: 14px; }
-        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #007bff; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 10px auto; display: none; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    </style>
-</head>
-<body>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Notes Summarizer</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      line-height: 1.6;
+      padding: 20px;
+      max-width: 800px;
+      margin: auto;
+      background-color: #f9f9f9;
+    }
 
-    <h1>🤖 AI Notes Summarizer</h1>
+    h1, h2 {
+      color: #333;
+    }
 
-    <div class="container">
-        <h2>Summarize Pasted Text</h2>
-        <textarea id="text-input" placeholder="Paste your notes here..."></textarea>
-        <button id="summarize-btn" onclick="summarizeText()">Summarize</button>
-    </div>
+    textarea {
+      width: 100%;
+      min-height: 150px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      padding: 10px;
+      box-sizing: border-box;
+      font-size: 15px;
+    }
 
-    <div class="container">
-        <h2>Summarize a File (.txt or .pdf)</h2>
-        <form id="upload-form">
-            <input type="file" id="file-input" name="file" accept=".txt,.pdf">
-            <button type="submit" id="upload-btn">Upload & Summarize</button>
-        </form>
-    </div>
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background-color 0.3s;
+    }
 
-    <div class="container">
-        <h2>Results</h2>
-        <div id="loader" class="loader"></div>
-        <div id="results">
-            <div id="summary-result" style="display:none;">
-                <h3>Summary</h3>
-                <p id="summary-text"></p>
-            </div>
-            <div id="keywords-result" style="display:none;">
-                <h3>Keywords</h3>
-                <ul id="keywords-list"></ul>
-            </div>
-            <div id="error-message" style="display:none; color: red;"></div>
-        </div>
-    </div>
+    button:hover {
+      background-color: #0056b3;
+    }
 
-    <script>
-        const summarizeBtn = document.getElementById('summarize-btn');
-        const uploadBtn = document.getElementById('upload-btn');
-        const uploadForm = document.getElementById('upload-form');
-        const loader = document.getElementById('loader');
-        
-        const summaryResult = document.getElementById('summary-result');
-        const keywordsResult = document.getElementById('keywords-result');
-        const summaryText = document.getElementById('summary-text');
-        const keywordsList = document.getElementById('keywords-list');
-        const errorMessage = document.getElementById('error-message');
+    button:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
 
-        function setLoading(isLoading) {
-            loader.style.display = isLoading ? 'block' : 'none';
-            summarizeBtn.disabled = isLoading;
-            uploadBtn.disabled = isLoading;
-        }
-
-        function displayResults(summary, keywords) {
-            summaryText.textContent = summary;
-            
-            keywordsList.innerHTML = ''; // Clear old keywords
-            keywords.forEach(kw => {
-                const li = document.createElement('li');
-                li.textContent = kw;
-                keywordsList.appendChild(li);
-            });
-
-            summaryResult.style.display = 'block';
-            keywordsResult.style.display = keywords.length > 0 ? 'block' : 'none';
-            errorMessage.style.display = 'none';
-        }
-
-        function displayError(error) {
-            errorMessage.textContent = error;
-            errorMessage.style.display = 'block';
-            summaryResult.style.display = 'none';
-            keywordsResult.style.display = 'none';
-        }
-
-        // Handle Text Summarization
-        async function summarizeText() {
-            const text = document.getElementById('text-input').value;
-            if (!text.trim()) {
-                displayError('Please paste some text to summarize.');
-                return;
-            }
-            
-            setLoading(true);
-            try {
-                const response = await fetch('/summarize', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ text: text })
-                });
-
-                const data = await response.json();
-                if (response.ok) {
-                    displayResults(data.summary, data.keywords);
-                } else {
-                    displayError(data.error || 'An unknown error occurred.');
-                }
-            } catch (error) {
-                displayError('Failed to connect to the server.');
-            } finally {
-                setLoading(false);
-            }
-        }
-
-        // Handle File Upload
-        uploadForm.addEventListener('submit', async function(event) {
-            event.preventDefault();
-            const fileInput = document.getElementById('file-input');
-            if (fileInput.files.length === 0) {
-                displayError('Please select a file to upload.');
-                return;
-            }
-
-            const formData = new FormData();
-            formData.append('file', fileInput.files[0]);
-
-            setLoading(true);
-            try {
-                const response = await fetch('/upload', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const data = await response.json();
-                if (response.ok) {
-                    displayResults(data.summary, data.keywords);
-                } else {
-                    displayError(data.error || 'An unknown error occurred.');
-                }
-            } catch (error) {
-                displayError('Failed to connect to the server.');
-            } finally {
-                setLoading(false);
-                uploadForm.reset();
-            }
-        });
-    </script>
-
-</body>
-</html>
+    .container {
+      background-color: #fff;
+      padding: 25px;
+      border-radius: 8px;
+      box-
